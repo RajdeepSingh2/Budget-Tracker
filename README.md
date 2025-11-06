@@ -30,8 +30,14 @@ It helps users track their income, expenses, and savings visually through intera
 | **Version Control** | Git & GitHub |
 
 ---
-![Homepage Screenshot](images/homepage.png)
+**LOGIN PAGE**
 ![Login Page](images/loginpage.png)
+
+**HOME PAGE**
+![Homepage Screenshot](images/homepage.png)
+
+**GRAPHS**
+
 ![Graphs Screenshot](images/graphs.png)
 
 
