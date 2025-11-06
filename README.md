@@ -4,6 +4,7 @@ A web-based financial management system built using **Spring Boot**, **MySQL**, 
 It helps users track their income, expenses, and savings visually through interactive charts.
 
 ---
+🔗 **Live Demo:** [Movie Explorer](https://rajdeepsingh2.github.io/Budget-Tracker/)
 
 ## 🚀 Features
 
