@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Personal Budget Tracker with Visual Analytics</title>
+  <link rel="stylesheet" href="style.css">
+
+  <style>
+    /* Top user bar */
+    #userBar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 12px 25px;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 900px;
+      margin: 20px auto;
+      backdrop-filter: blur(5px);
+    }
+
+    #userBar h2 {
+      margin: 0;
+      color: gold;
+      font-size: 1.2rem;
+    }
+
+    #logoutBtn {
+      background: crimson;
+      color: white;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: 0.3s;
+    }
+
+    #logoutBtn:hover {
+      background: #ff4444;
+      transform: scale(1.05);
+    }
+  </style>
+</head>
+
+<body>
+
+<h1>💰 Personal Budget Tracker with Visual Analytics</h1>
+
+<!-- ✅ User Info Bar -->
+<div id="userBar">
+  <h2 id="welcomeUser">Welcome!</h2>
+  <button id="logoutBtn" onclick="logout()">Logout</button>
+</div>
+
+<!-- ✅ Summary Section -->
+<div id="summaryBar" class="summary">
+  <div><b>Total Income:</b> ₹<span id="totalIncome">0</span></div>
+  <div><b>Total Expense:</b> ₹<span id="totalExpense">0</span></div>
+  <div><b>Net Balance:</b> ₹<span id="netBalance">0</span></div>
+</div>
+
+<!-- ⭐ NEW: Smart Insights Section -->
+<div class="summary" id="insightsBox">
+  <div id="topCategory">Top Category: -</div>
+  <div id="spendingTrend">Spending Trend: -</div>
+</div>
+
+<!-- ⭐ NEW: Budget Alert Section -->
+<div class="summary" id="budgetAlert" style="display:none; color:#ff6666; font-weight:bold;">
+  ⚠️ Monthly budget exceeded
+</div>
+
+<!-- ✅ Add / Edit Transaction Form -->
+<form id="transactionForm">
+  <select id="type" required>
+    <option value="">Select Type</option>
+    <option value="income">Income</option>
+    <option value="expense">Expense</option>
+  </select>
+
+  <input type="text" id="category" placeholder="Category" required />
+  <input type="number" id="amount" placeholder="Amount" required />
+  <input type="date" id="date" required />
+  <input type="text" id="description" placeholder="Description (optional)" />
+
+  <button type="submit">Save Transaction</button>
+</form>
+
+<!-- ✅ Filter/Search Section -->
+<div id="filterBar" class="summary">
+  <select id="filterType">
+    <option value="all">All</option>
+    <option value="income">Income</option>
+    <option value="expense">Expense</option>
+  </select>
+
+  <input type="text" id="searchBox" placeholder="Search by category or description">
+  <button type="button" onclick="applyFilters()">Filter</button>
+</div>
+
+<!-- ✅ Transactions Table -->
+<table>
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Type</th>
+      <th>Category</th>
+      <th>Amount</th>
+      <th>Date</th>
+      <th>Description</th>
+      <th>Action</th>
+    </tr>
+  </thead>
+  <tbody id="transactionTable"></tbody>
+</table>
+
+<!-- ✅ Charts -->
+<div class="charts-wrapper">
+  <div class="chart-box">
+    <h3>📊 Income vs Expense</h3>
+    <canvas id="pieChart"></canvas>
+  </div>
+
+  <div class="chart-box">
+    <h3>📦 Category Breakdown</h3>
+    <canvas id="barChart"></canvas>
+  </div>
+</div>
+
+<div class="chart-bottom-center">
+  <div class="chart-box large">
+    <h3>📅 Monthly Expense Trend</h3>
+    <canvas id="lineChart"></canvas>
+  </div>
+</div>
+
+<!-- ✅ Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="script.js"></script>
+
+<script>
+  const username = localStorage.getItem("username");
+  const welcomeUser = document.getElementById("welcomeUser");
+
+  if (!username) {
+    window.location.href = "login.html";
+  } else {
+    welcomeUser.innerText = `Welcome, ${username} 👋`;
+  }
+
+  function logout() {
+    localStorage.removeItem("username");
+    window.location.href = "login.html";
+  }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login | Personal Budget Tracker</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* Simple overrides for login layout */
+    .login-container {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      text-align: center;
+    }
+
+    .login-box {
+      background: rgba(255, 255, 255, 0.08);
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+      width: 320px;
+    }
+
+    .login-box h2 {
+      color: gold;
+      margin-bottom: 20px;
+    }
+
+    .login-box input {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 6px;
+      border: none;
+    }
+
+    .login-box button {
+      width: 100%;
+      background: gold;
+      color: black;
+      border: none;
+      font-weight: bold;
+      padding: 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    .login-box button:hover {
+      background: #ffcc00;
+      transform: scale(1.05);
+    }
+
+    .login-note {
+      margin-top: 15px;
+      font-size: 0.9em;
+      color: #ccc;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <div class="login-box">
+      <h2>🔐 Login to Budget Tracker</h2>
+      <input type="text" id="username" placeholder="Enter username" required />
+      <input type="password" id="password" placeholder="Enter password" required />
+      <button onclick="login()">Login</button>
+      <p class="login-note">Demo login: any name + any password</p>
+    </div>
+  </div>
+
+  <script>
+    function login() {
+      const username = document.getElementById("username").value.trim();
+      const password = document.getElementById("password").value.trim();
+
+      if (!username || !password) {
+        alert("Please enter both username and password!");
+        return;
+      }
+
+      // Save username to localStorage to display later
+      localStorage.setItem("username", username);
+
+      // Redirect to main dashboard
+      window.location.href = "index.html";
+    }
+  </script>
+</body>
+</html>
