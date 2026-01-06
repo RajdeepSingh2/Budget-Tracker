@@ -1,27 +1,36 @@
 const API_URL = "http://localhost:8080/api/transactions";
+const MONTHLY_BUDGET_LIMIT = 6000;
+
 let allTransactions = [];
+let editId = null;
 let pieChart, barChart, lineChart;
 
-// ✅ Load transactions
+/* ===============================
+   LOAD TRANSACTIONS
+================================ */
 async function loadTransactions() {
   const res = await fetch(API_URL);
   allTransactions = await res.json();
-  displayTransactions(allTransactions);
-  updateCharts(allTransactions);
+  render(allTransactions);
 }
 
-// ✅ Display table + summary
+function render(data) {
+  displayTransactions(data);
+  updateSummary(data);
+  updateInsights(data);
+  checkBudgetLimit(data);
+  updateCharts(data);
+}
+
+/* ===============================
+   TABLE + SUMMARY
+================================ */
 function displayTransactions(data) {
   const table = document.getElementById("transactionTable");
   table.innerHTML = "";
 
-  let totalIncome = 0, totalExpense = 0;
-
   data.forEach(t => {
-    if (t.type.toLowerCase() === "income") totalIncome += t.amount;
-    else totalExpense += t.amount;
-
-    const rowClass = t.type.toLowerCase() === "income" ? "income" : "expense";
+    const rowClass = t.type === "income" ? "income" : "expense";
 
     table.innerHTML += `
       <tr class="${rowClass}">
@@ -30,112 +39,199 @@ function displayTransactions(data) {
         <td>${t.category}</td>
         <td>${t.amount}</td>
         <td>${t.date}</td>
-        <td>${t.description}</td>
-        <td><button class="delete-btn" onclick="deleteTransaction(${t.id})">🗑️</button></td>
-      </tr>`;
+        <td>${t.description || ""}</td>
+        <td>
+          <button onclick="editTransaction(${t.id})">✏️</button>
+          <button class="delete-btn" onclick="deleteTransaction(${t.id})">🗑️</button>
+        </td>
+      </tr>
+    `;
   });
-
-  document.getElementById("totalIncome").innerText = totalIncome.toFixed(2);
-  document.getElementById("totalExpense").innerText = totalExpense.toFixed(2);
-  document.getElementById("netBalance").innerText = (totalIncome - totalExpense).toFixed(2);
 }
 
-// ✅ Delete transaction
-async function deleteTransaction(id) {
-  if (confirm("Are you sure you want to delete this transaction?")) {
-    await fetch(`${API_URL}/${id}`, { method: "DELETE" });
-    loadTransactions();
+function updateSummary(data) {
+  let income = 0, expense = 0;
+
+  data.forEach(t => {
+    t.type === "income" ? income += t.amount : expense += t.amount;
+  });
+
+  document.getElementById("totalIncome").innerText = income.toFixed(2);
+  document.getElementById("totalExpense").innerText = expense.toFixed(2);
+  document.getElementById("netBalance").innerText = (income - expense).toFixed(2);
+}
+
+/* ===============================
+   SMART INSIGHTS
+================================ */
+function updateInsights(data) {
+  const categoryTotals = {};
+
+  data.forEach(t => {
+    if (t.type === "expense") {
+      categoryTotals[t.category] =
+        (categoryTotals[t.category] || 0) + t.amount;
+    }
+  });
+
+  let topCategory = "-";
+  let maxAmount = 0;
+
+  for (let cat in categoryTotals) {
+    if (categoryTotals[cat] > maxAmount) {
+      maxAmount = categoryTotals[cat];
+      topCategory = cat;
+    }
+  }
+
+  document.getElementById("topCategory").innerText =
+    `Top Category: ${topCategory} (₹${maxAmount})`;
+
+  const expenses = data.filter(t => t.type === "expense");
+  if (expenses.length >= 2) {
+    const trend =
+      expenses[expenses.length - 1].amount >
+      expenses[expenses.length - 2].amount
+        ? "📈 Increasing"
+        : "📉 Decreasing";
+
+    document.getElementById("spendingTrend").innerText =
+      `Spending Trend: ${trend}`;
   }
 }
 
-// ✅ Add transaction
+/* ===============================
+   MONTHLY BUDGET ALERT
+================================ */
+function checkBudgetLimit(data) {
+  const currentMonth = new Date().toISOString().slice(0, 7);
+
+  const monthlyExpense = data
+    .filter(t => t.type === "expense" && t.date.startsWith(currentMonth))
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const alertBox = document.getElementById("budgetAlert");
+  if (!alertBox) return;
+
+  if (monthlyExpense > MONTHLY_BUDGET_LIMIT) {
+    alertBox.style.display = "block";
+    alertBox.innerText =
+      `⚠️ Monthly budget exceeded by ₹${monthlyExpense - MONTHLY_BUDGET_LIMIT}`;
+  } else {
+    alertBox.style.display = "none";
+  }
+}
+
+/* ===============================
+   ADD / UPDATE TRANSACTION
+================================ */
 document.getElementById("transactionForm").addEventListener("submit", async (e) => {
   e.preventDefault();
+
   const tx = {
     type: document.getElementById("type").value,
-    category: document.getElementById("category").value,
+    category: document.getElementById("category").value.trim(),
     amount: parseFloat(document.getElementById("amount").value),
     date: document.getElementById("date").value,
-    description: document.getElementById("description").value
+    description: document.getElementById("description").value.trim()
   };
 
-  await fetch(API_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(tx)
-  });
+  if (!tx.type || !tx.category || tx.amount <= 0) {
+    alert("Enter valid details");
+    return;
+  }
+
+  if (editId !== null) {
+    await fetch(`${API_URL}/${editId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(tx)
+    });
+    editId = null;
+  } else {
+    await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(tx)
+    });
+  }
 
   e.target.reset();
   loadTransactions();
 });
 
-// ✅ Filter function
-function applyFilters() {
-  const typeFilter = document.getElementById("filterType").value;
-  const searchText = document.getElementById("searchBox").value.toLowerCase();
+/* ===============================
+   EDIT TRANSACTION
+================================ */
+function editTransaction(id) {
+  const t = allTransactions.find(x => x.id === id);
 
-  let filtered = allTransactions;
+  document.getElementById("type").value = t.type;
+  document.getElementById("category").value = t.category;
+  document.getElementById("amount").value = t.amount;
+  document.getElementById("date").value = t.date;
+  document.getElementById("description").value = t.description;
 
-  if (typeFilter !== "all")
-    filtered = filtered.filter(t => t.type.toLowerCase() === typeFilter);
-
-  if (searchText)
-    filtered = filtered.filter(t =>
-      t.category.toLowerCase().includes(searchText) ||
-      t.description.toLowerCase().includes(searchText)
-    );
-
-  displayTransactions(filtered);
-  updateCharts(filtered);
+  editId = id;
 }
 
-// ✅ Update all charts
+/* ===============================
+   DELETE TRANSACTION
+================================ */
+async function deleteTransaction(id) {
+  if (!confirm("Delete this transaction?")) return;
+  await fetch(`${API_URL}/${id}`, { method: "DELETE" });
+  loadTransactions();
+}
+
+/* ===============================
+   CHARTS (ORIGINAL COLORS)
+================================ */
 function updateCharts(data) {
-  const income = data.filter(t => t.type.toLowerCase() === "income")
-                     .reduce((sum, t) => sum + t.amount, 0);
-  const expense = data.filter(t => t.type.toLowerCase() === "expense")
-                      .reduce((sum, t) => sum + t.amount, 0);
+  const income = data.filter(t => t.type === "income")
+                     .reduce((s, t) => s + t.amount, 0);
+  const expense = data.filter(t => t.type === "expense")
+                      .reduce((s, t) => s + t.amount, 0);
 
   const categoryTotals = {};
   data.forEach(t => {
-    categoryTotals[t.category] = (categoryTotals[t.category] || 0) + t.amount;
+    categoryTotals[t.category] =
+      (categoryTotals[t.category] || 0) + t.amount;
   });
 
-  // 📅 Monthly Expense Trend
   const monthlyExpense = {};
   data.forEach(t => {
-    if (t.type.toLowerCase() === "expense" && t.date) {
-      const month = t.date.substring(0, 7); // YYYY-MM
-      monthlyExpense[month] = (monthlyExpense[month] || 0) + t.amount;
+    if (t.type === "expense") {
+      const month = t.date.substring(0, 7);
+      monthlyExpense[month] =
+        (monthlyExpense[month] || 0) + t.amount;
     }
   });
 
   const months = Object.keys(monthlyExpense).sort();
   const monthlyAmounts = months.map(m => monthlyExpense[m]);
 
-  const pieCtx = document.getElementById("pieChart").getContext("2d");
-  const barCtx = document.getElementById("barChart").getContext("2d");
-  const lineCtx = document.getElementById("lineChart").getContext("2d");
+  pieChart?.destroy();
+  barChart?.destroy();
+  lineChart?.destroy();
 
-  if (pieChart) pieChart.destroy();
-  if (barChart) barChart.destroy();
-  if (lineChart) lineChart.destroy();
-
-  // ✅ Pie Chart — Income vs Expense
-  pieChart = new Chart(pieCtx, {
+  pieChart = new Chart(document.getElementById("pieChart"), {
     type: "pie",
     data: {
       labels: ["Income", "Expense"],
       datasets: [{
         data: [income, expense],
-        backgroundColor: ["#00ff99", "#ff6666"]
+        backgroundColor: ["#00ff99", "#ff6666"],
+        borderColor: "#ffffff",
+        borderWidth: 2
       }]
     },
-    options: { plugins: { legend: { labels: { color: "white" } } } }
+    options: {
+      plugins: { legend: { labels: { color: "white" } } }
+    }
   });
 
-  // ✅ Bar Chart — Category Breakdown
-  barChart = new Chart(barCtx, {
+  barChart = new Chart(document.getElementById("barChart"), {
     type: "bar",
     data: {
       labels: Object.keys(categoryTotals),
@@ -154,8 +250,7 @@ function updateCharts(data) {
     }
   });
 
-  // ✅ Line Chart — Monthly Expense Trend
-  lineChart = new Chart(lineCtx, {
+  lineChart = new Chart(document.getElementById("lineChart"), {
     type: "line",
     data: {
       labels: months,
@@ -163,9 +258,9 @@ function updateCharts(data) {
         label: "Monthly Expense Trend",
         data: monthlyAmounts,
         borderColor: "#ff6666",
-        backgroundColor: "rgba(255, 102, 102, 0.3)",
-        tension: 0.4,
+        backgroundColor: "rgba(255,102,102,0.35)",
         fill: true,
+        tension: 0.4,
         pointBackgroundColor: "gold"
       }]
     },
@@ -174,13 +269,12 @@ function updateCharts(data) {
         x: { ticks: { color: "white" } },
         y: { ticks: { color: "white" } }
       },
-      plugins: {
-        legend: { labels: { color: "white" } }
-      }
+      plugins: { legend: { labels: { color: "white" } } }
     }
   });
 }
 
-loadTransactions();
-
-
+/* ===============================
+   INIT
+================================ */
+document.addEventListener("DOMContentLoaded", loadTransactions);
